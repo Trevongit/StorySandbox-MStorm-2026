@@ -252,7 +252,37 @@ h3 {
                     <button class="btn btn-small" id="rotateBtn" style="flex:1">Rotate</button>
                     <button class="btn btn-small" id="scaleBtn" style="flex:1">Scale</button>
                 </div>
+                
+                <div id="actorControls" style="display: none; flex-direction: column; gap: 8px; margin-top: 8px; border-top: 1px solid var(--panel-border); padding-top: 8px;">
+                    <label style="font-size: 0.8rem;">Animation:</label>
+                    <select id="animationSelect" class="btn btn-small" style="width: 100%; appearance: none; text-align: center;">
+                        <option value="idle">Idle (Breath)</option>
+                        <option value="talk">Talk (Wobble)</option>
+                        <option value="wave">Wave (Rotate)</option>
+                        <option value="none">Paused</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+                    <label style="font-size: 0.8rem;">Color:</label>
+                    <input type="color" id="colorPicker" style="border:none; width: 40px; height: 24px; cursor: pointer; background: transparent;">
+                </div>
+
                 <button class="btn btn-danger" id="deleteBtn" style="margin-top: 8px;">Delete Selected</button>
+            </div>
+
+            <hr class="divider">
+
+            <h3>Environment</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="font-size: 0.8rem;">Light:</label>
+                    <input type="range" id="lightIntensity" min="0" max="5" step="0.1" value="2" style="width: 100px;">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="font-size: 0.8rem;">Floor:</label>
+                    <input type="color" id="floorColor" value="#1a1c23" style="border:none; width: 40px; height: 24px; cursor: pointer; background: transparent;">
+                </div>
             </div>
         </aside>
 
@@ -370,6 +400,31 @@ function applyShot(shot) {
     orbit.update();
 }
 
+function selectObject(obj) {
+    selectedObject = obj;
+    transformControl.attach(obj);
+    document.getElementById('selectedInfo').innerText = `Selected: ${obj.userData.name}`;
+    document.getElementById('transformationTools').style.display = 'flex';
+    
+    // Update property controls
+    document.getElementById('colorPicker').value = "#" + obj.material.color.getHexString();
+    
+    const actorControls = document.getElementById('actorControls');
+    if(obj.userData.type === 'actor') {
+        actorControls.style.display = 'flex';
+        document.getElementById('animationSelect').value = obj.userData.animation || 'idle';
+    } else {
+        actorControls.style.display = 'none';
+    }
+}
+
+function deselectObject() {
+    selectedObject = null;
+    transformControl.detach();
+    document.getElementById('selectedInfo').innerText = 'No object selected';
+    document.getElementById('transformationTools').style.display = 'none';
+}
+
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
@@ -397,20 +452,6 @@ window.addEventListener('pointerdown', (event) => {
     }
 });
 
-function selectObject(obj) {
-    selectedObject = obj;
-    transformControl.attach(obj);
-    document.getElementById('selectedInfo').innerText = `Selected: ${obj.userData.name}`;
-    document.getElementById('transformationTools').style.display = 'flex';
-}
-
-function deselectObject() {
-    selectedObject = null;
-    transformControl.detach();
-    document.getElementById('selectedInfo').innerText = 'No object selected';
-    document.getElementById('transformationTools').style.display = 'none';
-}
-
 // --- 6. UI Interactions ---
 const addActorBtn = document.getElementById('addActorBtn');
 const addPropBtn = document.getElementById('addPropBtn');
@@ -420,9 +461,34 @@ const transBtn = document.getElementById('translateBtn');
 const rotBtn = document.getElementById('rotateBtn');
 const scaleBtn = document.getElementById('scaleBtn');
 
+const colorPicker = document.getElementById('colorPicker');
+const animSelect = document.getElementById('animationSelect');
+const lightIntensityInput = document.getElementById('lightIntensity');
+const floorColorInput = document.getElementById('floorColor');
+
 transBtn.addEventListener('click', () => transformControl.setMode('translate'));
 rotBtn.addEventListener('click', () => transformControl.setMode('rotate'));
 scaleBtn.addEventListener('click', () => transformControl.setMode('scale'));
+
+colorPicker.addEventListener('input', (e) => {
+    if(selectedObject) {
+        selectedObject.material.color.set(e.target.value);
+    }
+});
+
+animSelect.addEventListener('change', (e) => {
+    if(selectedObject && selectedObject.userData.type === 'actor') {
+        selectedObject.userData.animation = e.target.value;
+    }
+});
+
+lightIntensityInput.addEventListener('input', (e) => {
+    dirLight.intensity = parseFloat(e.target.value);
+});
+
+floorColorInput.addEventListener('input', (e) => {
+    plane.material.color.set(e.target.value);
+});
 
 // --- Cinematic Shot Logic ---
 captureShotBtn.addEventListener('click', () => {
@@ -444,11 +510,17 @@ saveProjectBtn.addEventListener('click', () => {
         objects: objects.map(obj => ({
             type: obj.userData.type,
             name: obj.userData.name,
+            animation: obj.userData.animation || 'idle',
+            color: "#" + obj.material.color.getHexString(),
             position: obj.position.toArray(),
             rotation: obj.rotation.toArray(),
             scale: obj.scale.toArray()
         })),
-        shots: shots
+        shots: shots,
+        env: {
+            lightIntensity: dirLight.intensity,
+            floorColor: "#" + plane.material.color.getHexString()
+        }
     };
     
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
@@ -490,14 +562,23 @@ function clearScene() {
 
 function loadScene(data) {
     if(!data.objects) return;
+    
+    // Rehydrate environment
+    if(data.env) {
+        dirLight.intensity = data.env.lightIntensity;
+        lightIntensityInput.value = data.env.lightIntensity;
+        plane.material.color.set(data.env.floorColor);
+        floorColorInput.value = data.env.floorColor;
+    }
+
     data.objects.forEach(objData => {
         let geo, mat;
         if(objData.type === 'actor') {
             geo = new THREE.CapsuleGeometry(0.4, 1.2, 4, 16);
-            mat = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.2, metalness: 0.1 });
+            mat = new THREE.MeshStandardMaterial({ color: objData.color || 0x6366f1, roughness: 0.2, metalness: 0.1 });
         } else {
             geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            mat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.6, metalness: 0.2 });
+            mat = new THREE.MeshStandardMaterial({ color: objData.color || 0x10b981, roughness: 0.6, metalness: 0.2 });
         }
         
         const mesh = new THREE.Mesh(geo, mat);
@@ -506,7 +587,11 @@ function loadScene(data) {
         mesh.scale.fromArray(objData.scale);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
-        mesh.userData = { name: objData.name, type: objData.type };
+        mesh.userData = { 
+            name: objData.name, 
+            type: objData.type,
+            animation: objData.animation || 'idle'
+        };
         
         scene.add(mesh);
         objects.push(mesh);
@@ -523,7 +608,11 @@ addActorBtn.addEventListener('click', () => {
     actor.position.y = 1.0;
     actor.castShadow = true;
     actor.receiveShadow = true;
-    actor.userData = { name: `Actor ${objects.filter(o=>o.userData.type==='actor').length + 1}`, type: 'actor' };
+    actor.userData = { 
+        name: `Actor ${objects.filter(o=>o.userData.type==='actor').length + 1}`, 
+        type: 'actor',
+        animation: 'idle'
+    };
     
     scene.add(actor);
     objects.push(actor);
@@ -569,11 +658,23 @@ function animate() {
     const time = clock.getElapsedTime();
     
     if (isPlaying) {
-        // Very basic idle breathing animation just to show it's alive
         objects.forEach(obj => {
             if(obj.userData.type === 'actor') {
-                obj.position.y = 1.0 + Math.sin(time * 3 + obj.id) * 0.05;
-                obj.rotation.y = Math.sin(time * 0.5 + obj.id) * 0.2;
+                const anim = obj.userData.animation || 'idle';
+                
+                if(anim === 'idle') {
+                    obj.position.y = 1.0 + Math.sin(time * 3 + obj.id) * 0.05;
+                    obj.rotation.y = Math.sin(time * 0.5 + obj.id) * 0.1;
+                } else if(anim === 'talk') {
+                    // Wobbly talk animation
+                    obj.position.y = 1.0 + Math.sin(time * 10 + obj.id) * 0.02;
+                    obj.scale.x = 1.0 + Math.sin(time * 12) * 0.05;
+                    obj.rotation.z = Math.sin(time * 8) * 0.05;
+                } else if(anim === 'wave') {
+                    // Rotating wave
+                    obj.rotation.z = Math.sin(time * 5) * 0.5;
+                    obj.position.x += Math.sin(time * 2) * 0.01;
+                }
             }
         });
 
