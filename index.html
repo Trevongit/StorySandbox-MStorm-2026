@@ -219,8 +219,11 @@ h3 {
     <div class="ui-layer">
         <header class="glass-panel">
             <h1>Moviestorm Studio</h1>
-            <div class="actions">
-                <button class="btn" id="exportBtn" disabled>Export Scene</button>
+            <div class="actions" style="display: flex; gap: 8px;">
+                <button class="btn btn-small" id="saveProjectBtn">💾 Save Project</button>
+                <button class="btn btn-small" id="loadProjectBtn">📂 Load Project</button>
+                <input type="file" id="loadFilePicker" style="display: none;" accept=".mstorm">
+                <button class="btn" id="exportBtn" disabled>Export Video</button>
             </div>
         </header>
 
@@ -229,6 +232,14 @@ h3 {
             <button class="btn" id="addActorBtn">+ Add Actor</button>
             <button class="btn" id="addPropBtn">+ Add Prop</button>
             
+            <hr class="divider">
+            
+            <h3>Cinematic Shots</h3>
+            <button class="btn btn-small" id="captureShotBtn">📸 Capture Shot</button>
+            <div id="shotsContainer" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; max-height: 150px; overflow-y: auto;">
+                <!-- Shots will appear here -->
+            </div>
+
             <hr class="divider">
             
             <h3>Properties</h3>
@@ -327,9 +338,37 @@ plane.rotation.x = -Math.PI / 2;
 plane.receiveShadow = true;
 scene.add(plane);
 
-// --- 5. State & Raycasting ---
+// --- 5. State, Shots & Persistence ---
 let objects = [];
+let shots = [];
 let selectedObject = null;
+
+const captureShotBtn = document.getElementById('captureShotBtn');
+const shotsContainer = document.getElementById('shotsContainer');
+const saveProjectBtn = document.getElementById('saveProjectBtn');
+const loadProjectBtn = document.getElementById('loadProjectBtn');
+const loadFilePicker = document.getElementById('loadFilePicker');
+
+function updateShotsUI() {
+    shotsContainer.innerHTML = '';
+    shots.forEach((shot, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-small';
+        btn.style.textAlign = 'left';
+        btn.style.marginBottom = '4px';
+        btn.innerHTML = `<span>Shot ${index + 1}</span><span style="font-size: 10px; opacity: 0.5; margin-left: auto; color: var(--accent);">View</span>`;
+        btn.onclick = () => applyShot(shot);
+        shotsContainer.appendChild(btn);
+    });
+}
+
+function applyShot(shot) {
+    // Smoother camera transition logic can be added here
+    camera.position.fromArray(shot.cameraPos);
+    camera.quaternion.fromArray(shot.cameraQuat);
+    orbit.target.fromArray(shot.orbitTarget);
+    orbit.update();
+}
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -384,6 +423,98 @@ const scaleBtn = document.getElementById('scaleBtn');
 transBtn.addEventListener('click', () => transformControl.setMode('translate'));
 rotBtn.addEventListener('click', () => transformControl.setMode('rotate'));
 scaleBtn.addEventListener('click', () => transformControl.setMode('scale'));
+
+// --- Cinematic Shot Logic ---
+captureShotBtn.addEventListener('click', () => {
+    const shot = {
+        id: Date.now(),
+        cameraPos: camera.position.toArray(),
+        cameraQuat: camera.quaternion.toArray(),
+        orbitTarget: orbit.target.toArray()
+    };
+    shots.push(shot);
+    updateShotsUI();
+});
+
+// --- Save/Load Logic ---
+saveProjectBtn.addEventListener('click', () => {
+    const projectData = {
+        name: "My Story",
+        version: "2026.1",
+        objects: objects.map(obj => ({
+            type: obj.userData.type,
+            name: obj.userData.name,
+            position: obj.position.toArray(),
+            rotation: obj.rotation.toArray(),
+            scale: obj.scale.toArray()
+        })),
+        shots: shots
+    };
+    
+    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `project_${Date.now()}.mstorm`;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+loadProjectBtn.addEventListener('click', () => loadFilePicker.click());
+
+loadFilePicker.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const data = JSON.parse(event.target.result);
+            clearScene();
+            loadScene(data);
+        } catch(err) {
+            console.error("Failed to load project:", err);
+            alert("This doesn't look like a valid .mstorm file.");
+        }
+    };
+    reader.readAsText(file);
+});
+
+function clearScene() {
+    objects.forEach(obj => scene.remove(obj));
+    objects = [];
+    shots = [];
+    deselectObject();
+    updateShotsUI();
+}
+
+function loadScene(data) {
+    if(!data.objects) return;
+    data.objects.forEach(objData => {
+        let geo, mat;
+        if(objData.type === 'actor') {
+            geo = new THREE.CapsuleGeometry(0.4, 1.2, 4, 16);
+            mat = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.2, metalness: 0.1 });
+        } else {
+            geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            mat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.6, metalness: 0.2 });
+        }
+        
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.fromArray(objData.position);
+        mesh.rotation.fromArray(objData.rotation);
+        mesh.scale.fromArray(objData.scale);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.userData = { name: objData.name, type: objData.type };
+        
+        scene.add(mesh);
+        objects.push(mesh);
+    });
+    
+    shots = data.shots || [];
+    updateShotsUI();
+}
 
 addActorBtn.addEventListener('click', () => {
     const geo = new THREE.CapsuleGeometry(0.4, 1.2, 4, 16);
