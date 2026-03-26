@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moviestorm 2026 - Web MVP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+:root {
+  --bg-dark: #0f1115;
+  --panel-bg: rgba(20, 24, 32, 0.65);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text-main: #f3f4f6;
+  --text-muted: #a1a1aa;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  user-select: none;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-main);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.ui-layer {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none; /* Let clicks pass down to canvas */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  pointer-events: auto; /* Catch clicks on UI */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+header {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #fff, #a5b4fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.sidebar {
+  width: 280px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.divider {
+  border: 0;
+  height: 1px;
+  background: var(--panel-border);
+  margin: 12px 0;
+}
+
+.text-muted {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  padding: 8px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-small:hover {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.btn-danger {
+  background: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-hover);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.bottom-bar {
+  padding: 16px 24px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.action-btn {
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+}
+
+.timeline {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+}
+
+.timeline-scrubber {
+  position: absolute;
+  top: -6px;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: grab;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-scrubber:active {
+  cursor: grabbing;
+}
+
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="ui-layer">
+        <header class="glass-panel">
+            <h1>Moviestorm Studio</h1>
+            <div class="actions">
+                <button class="btn" id="exportBtn" disabled>Export Scene</button>
+            </div>
+        </header>
+
+        <aside class="sidebar glass-panel">
+            <h3>Library</h3>
+            <button class="btn" id="addActorBtn">+ Add Actor</button>
+            <button class="btn" id="addPropBtn">+ Add Prop</button>
+            
+            <hr class="divider">
+            
+            <h3>Properties</h3>
+            <p id="selectedInfo" class="text-muted">No object selected</p>
+            
+            <div id="transformationTools" style="display: none; flex-direction: column; gap: 8px;">
+                <label style="font-size: 0.8rem; margin-top: 8px;">Mode:</label>
+                <div style="display: flex; gap: 4px;">
+                    <button class="btn btn-small" id="translateBtn" style="flex:1">Move</button>
+                    <button class="btn btn-small" id="rotateBtn" style="flex:1">Rotate</button>
+                    <button class="btn btn-small" id="scaleBtn" style="flex:1">Scale</button>
+                </div>
+                <button class="btn btn-danger" id="deleteBtn" style="margin-top: 8px;">Delete Selected</button>
+            </div>
+        </aside>
+
+        <footer class="bottom-bar glass-panel">
+            <button class="btn action-btn" id="playBtn">▶</button>
+            <div class="timeline">
+                <div class="timeline-scrubber" id="scrubber"></div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Main Application Logic (Inlined to bypass CORS local restrictions) -->
+    <script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+// --- 1. Scene Setup ---
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x13151a);
+scene.fog = new THREE.Fog(0x13151a, 10, 60);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 6, 12);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // optimize for high DPI
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+container.appendChild(renderer.domElement);
+
+// --- 2. Controls ---
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.05;
+orbit.maxPolarAngle = Math.PI / 2 - 0.05; // Lock below ground
+
+const transformControl = new TransformControls(camera, renderer.domElement);
+transformControl.addEventListener('dragging-changed', function (event) {
+    orbit.enabled = !event.value; // Disable orbit when dragging
+});
+scene.add(transformControl);
+
+// --- 3. Lighting ---
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+dirLight.position.set(10, 15, 10);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 50;
+dirLight.shadow.camera.left = -15;
+dirLight.shadow.camera.right = 15;
+dirLight.shadow.camera.top = 15;
+dirLight.shadow.camera.bottom = -15;
+dirLight.shadow.bias = -0.0001;
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0xa5b4fc, 0.8);
+fillLight.position.set(-10, 10, -10);
+scene.add(fillLight);
+
+// --- 4. Environment (Level / Stage) ---
+const gridHelper = new THREE.GridHelper(30, 30, 0x444455, 0x222233);
+gridHelper.position.y = 0.01;
+scene.add(gridHelper);
+
+const planeGeo = new THREE.PlaneGeometry(30, 30);
+const planeMat = new THREE.MeshStandardMaterial({ 
+    color: 0x1a1c23, 
+    roughness: 0.4,
+    metalness: 0.1
+});
+const plane = new THREE.Mesh(planeGeo, planeMat);
+plane.rotation.x = -Math.PI / 2;
+plane.receiveShadow = true;
+scene.add(plane);
+
+// --- 5. State & Raycasting ---
+let objects = [];
+let selectedObject = null;
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('pointerdown', (event) => {
+    // Check if clicking on UI
+    if(event.target.closest('.glass-panel')) return;
+    
+    // Check if interacting with Transform controls (the gizmos)
+    if(transformControl.dragging) return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(objects, false);
+
+    if (intersects.length > 0) {
+        selectObject(intersects[0].object);
+    } else {
+        // Only deselect if we aren't clicking the transform gizmo
+        const gizmoIntersect = raycaster.intersectObject(transformControl, true);
+        if(gizmoIntersect.length === 0) {
+            deselectObject();
+        }
+    }
+});
+
+function selectObject(obj) {
+    selectedObject = obj;
+    transformControl.attach(obj);
+    document.getElementById('selectedInfo').innerText = `Selected: ${obj.userData.name}`;
+    document.getElementById('transformationTools').style.display = 'flex';
+}
+
+function deselectObject() {
+    selectedObject = null;
+    transformControl.detach();
+    document.getElementById('selectedInfo').innerText = 'No object selected';
+    document.getElementById('transformationTools').style.display = 'none';
+}
+
+// --- 6. UI Interactions ---
+const addActorBtn = document.getElementById('addActorBtn');
+const addPropBtn = document.getElementById('addPropBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+
+const transBtn = document.getElementById('translateBtn');
+const rotBtn = document.getElementById('rotateBtn');
+const scaleBtn = document.getElementById('scaleBtn');
+
+transBtn.addEventListener('click', () => transformControl.setMode('translate'));
+rotBtn.addEventListener('click', () => transformControl.setMode('rotate'));
+scaleBtn.addEventListener('click', () => transformControl.setMode('scale'));
+
+addActorBtn.addEventListener('click', () => {
+    const geo = new THREE.CapsuleGeometry(0.4, 1.2, 4, 16);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.2, metalness: 0.1 });
+    const actor = new THREE.Mesh(geo, mat);
+    actor.position.y = 1.0;
+    actor.castShadow = true;
+    actor.receiveShadow = true;
+    actor.userData = { name: `Actor ${objects.filter(o=>o.userData.type==='actor').length + 1}`, type: 'actor' };
+    
+    scene.add(actor);
+    objects.push(actor);
+    selectObject(actor);
+});
+
+addPropBtn.addEventListener('click', () => {
+    const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.6, metalness: 0.2 });
+    const prop = new THREE.Mesh(geo, mat);
+    prop.position.y = 0.75;
+    prop.position.x = (Math.random() - 0.5) * 6;
+    prop.position.z = (Math.random() - 0.5) * 6;
+    prop.castShadow = true;
+    prop.receiveShadow = true;
+    prop.userData = { name: `Prop ${objects.filter(o=>o.userData.type==='prop').length + 1}`, type: 'prop' };
+    
+    scene.add(prop);
+    objects.push(prop);
+    selectObject(prop);
+});
+
+deleteBtn.addEventListener('click', () => {
+    if(selectedObject) {
+        scene.remove(selectedObject);
+        objects = objects.filter(o => o !== selectedObject);
+        deselectObject();
+    }
+});
+
+// --- 7. Animation Loop ---
+const clock = new THREE.Clock();
+let isPlaying = false;
+
+document.getElementById('playBtn').addEventListener('click', (e) => {
+    isPlaying = !isPlaying;
+    e.target.innerText = isPlaying ? '⏸' : '▶';
+});
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    const time = clock.getElapsedTime();
+    
+    if (isPlaying) {
+        // Very basic idle breathing animation just to show it's alive
+        objects.forEach(obj => {
+            if(obj.userData.type === 'actor') {
+                obj.position.y = 1.0 + Math.sin(time * 3 + obj.id) * 0.05;
+                obj.rotation.y = Math.sin(time * 0.5 + obj.id) * 0.2;
+            }
+        });
+
+        // Move Scrubber
+        const scrubber = document.getElementById('scrubber');
+        let perc = (time % 5) / 5 * 100; // Loop every 5 seconds for demo
+        scrubber.style.left = `${perc}%`;
+    }
+
+    orbit.update();
+    renderer.render(scene, camera);
+}
+
+// Handle resizing
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Start loop
+animate();
+
+    </script>
+</body>
+</html>
