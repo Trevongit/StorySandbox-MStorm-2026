@@ -1,0 +1,21 @@
+[package]
+name = "story-sandbox"
+version = "0.1.0"
+description = "A browser-based storytelling sandbox (MStorm 2026)"
+authors = ["Antigravity & Trevongit"]
+license = "MIT"
+repository = "https://github.com/Trevongit/StorySandbox-MStorm-2026"
+edition = "2021"
+rust-version = "1.70"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "1.5", features = ["shell-open"] }
+
+[features]
+# by default Tauri runs in the browser, but we can add native features here
+custom-protocol = ["tauri/custom-protocol"]
