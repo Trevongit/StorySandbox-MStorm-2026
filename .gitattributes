@@ -1,0 +1,19 @@
+# MStorm Studio - Git Attributes
+# Ensure consistent line endings across Windows, Linux, and macOS
+
+# Default behavior: handle according to user's native system
+* text=auto
+
+# Explicitly force LF for shell scripts (Required for Linux/macOS)
+*.sh text eol=lf
+
+# Explicitly force CRLF for Windows batch files
+*.bat text eol=crlf
+
+# Binary files (Do not touch)
+*.glb binary
+*.gltf binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
