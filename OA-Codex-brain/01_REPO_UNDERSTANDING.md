@@ -44,9 +44,8 @@
 
 ## Documentation Reality
 - Docs clearly encode product ethos and conceptual roadmap.
-- Some docs still reference prior repo paths (example Windows local path references).
-- Some README doc links point to files not currently present in `docs/`.
-- There are duplicated docs (`04_ai_upscaling_brainstorm.md` vs `ai_upscaling_brainstorm.md`, and ingestion guides).
+- Legacy duplicate docs and stale path references were recently cleaned up.
+- The docs now have a canonical index (`docs/README.md`) and active status file (`docs/development_status.md`).
 
 ## Operational Conclusion
 - Repo contains a real functioning codebase with momentum.

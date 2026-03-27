@@ -18,4 +18,4 @@ Assets were treated as characters with roles or props with behaviors, rather tha
 The UI was built for the artistic creator, not the technical TD.
 
 ---
-*Reference: [Technical Knowledge Base](file:///C:/REPOO/StarterX1/docs/06_technical_knowledge_base.md)*
+*Reference: `docs/06_technical_knowledge_base.md`*

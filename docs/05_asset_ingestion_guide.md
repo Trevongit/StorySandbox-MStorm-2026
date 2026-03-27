@@ -20,7 +20,7 @@ public/
 
 ## 3. Ingesting 'Original' Folders
 If you have the raw legacy Moviestorm assets:
-1. Please copy the folders into `C:\REPOO\StarterX1\moviestorm_originals`.
+1. Copy the folders into `<repo-root>/moviestorm_originals`.
 2. I will then write a Python script to "scan" these folders and attempt to map the textures and models into the modern 2026 format.
 
 ---

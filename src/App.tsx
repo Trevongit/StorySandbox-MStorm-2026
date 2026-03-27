@@ -3,7 +3,7 @@ import { SceneView } from './components/SceneView'
 import { Sidebar } from './components/Sidebar'
 import { useStore } from './store/useStore'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { Save, Undo, Redo, Play, Pause, Camera, Plus } from 'lucide-react'
+import { Save, Undo, Redo, Play, Camera } from 'lucide-react'
 
 export default function App() {
   const undo = useStore((s) => s.undo)

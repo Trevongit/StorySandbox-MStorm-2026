@@ -1,9 +1,8 @@
 import React, { Suspense, useRef, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { CameraControls, Sky, ContactShadows, Html } from '@react-three/drei'
+import { CameraControls, Sky, Html } from '@react-three/drei'
 import { useStore } from '../store/useStore'
 import { EntityComponent } from './Entity'
-import { Bloom, EffectComposer } from '@react-three/postprocessing'
 
 export function SceneView() {
   const activeSceneId = useStore((s) => s.activeSceneId)
@@ -69,23 +68,7 @@ export function SceneView() {
         
         <gridHelper args={[50, 50, 0x444455, 0x222233]} position={[0, 0.01, 0]} />
 
-        {/* Post-processing and advanced shadows remain disabled for stability phase
-        <ContactShadows 
-          opacity={0.4} 
-          scale={30} 
-          blur={2.4} 
-          far={10} 
-          resolution={256} 
-          color="#000000" 
-        />
-        <EffectComposer>
-           <Bloom 
-             intensity={1.0} 
-             luminanceThreshold={0.9} 
-             luminanceSmoothing={0.025} 
-           />
-        </EffectComposer>
-        */}
+        {/* Phase 5 lighting/post-processing will be reintroduced once dependency versions are aligned. */}
       </Suspense>
     </Canvas>
   )

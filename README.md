@@ -1,58 +1,61 @@
-# 🌌 MStorm Studio 2026 (aka StorySandbox)
+# MStorm Studio 2026 (StorySandbox)
 
-> **"Cinematic Storytelling at the Speed of Play."**
+> Cinematic storytelling at the speed of play.
 
-MStorm Studio 2026 is a professional-grade, high-performance cinematic storytelling engine built for rapid scene creation, character interaction, and stage blocking. It is inspired by the legendary **Moviestorm** heritage, redesigned from the ground up for the modern web and native desktop.
+MStorm Studio 2026 is a director-first storytelling sandbox inspired by Moviestorm.  
+The core product rule is the **Golden Loop**: creative actions should produce visible results in under one second.
 
----
+## Current Runtime Status
+- Primary runtime: `src/` (React + Zustand + React Three Fiber + Vite).
+- Legacy runtime: `index.html` (standalone V1 reference/prototype path).
+- Native scaffold: `src-tauri/` (Tauri command bridge, ingestion path in progress).
 
-## 🎭 The "Golden Loop" Philosophy
-MStorm is built to maintain a "Golden Loop": every creative action—from moving a character to changing an animation—must result in a visual update in **less than one second**. No heavy renders, no "baking" wait times.
+## What Works Today
+- 3D viewport rendering and scene grounding.
+- Entity add/select/remove (actors and props).
+- Direct transform manipulation via gizmo.
+- Actor interaction hooks (animation state changes).
+- Undo/redo for add/remove/transform/animation changes.
+- Safe fallback actor rendering when model assets are missing.
 
-## 🚀 Current Features (Verified)
-- **Cinematic Viewport**: High-fidelity 3D rendering via Three.js/R3F.
-- **Click-to-Animate**: Intuitive character interaction (Cycle through Idle, Walk, and Wave).
-- **Direct Manipulation**: Professional 3D gizmos (Drei PivotControls) for millimetric entity placement.
-- **Stage Grounding**: Integrated grid and floor system for spatial reference.
-- **Multi-Entity Support**: Manage complex scenes with actors and props.
-
-## 📦 Getting Started
-
+## Quick Start
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- [npm](https://www.npmjs.com/) (v9+)
+- Node.js 18+
+- npm 9+
 
-### 🪟 Windows (Recommended)
-Double-click `START_MSTORM.bat` in the root directory. This script will automatically verify your environment, install dependencies, and launch the dev server.
-
-### 🐧 Linux Mint / 🍎 macOS
+### Run Dev
 ```bash
-chmod +x START_MSTORM.sh
-./START_MSTORM.sh
+npm install
+npm run dev
 ```
 
-### 💻 Development Commands
-- `npm install` - Setup project
-- `npm run dev` - Launch local development viewport (`http://localhost:1420`)
-- `npm run build` - Create production bundle
+### Build
+```bash
+npm run build
+```
 
-## 🛠️ Project Roadmap
-- [x] **Phase 3 (Interaction Core)**: Click-to-animate and direct manipulation. (Completed)
-- [ ] **Phase 4 (UI Overhaul)**: Transform Inspector & Material Editor.
-- [ ] **Phase 5 (Cinematic Lighting)**: Bloom, SSR, Contact Shadows.
-- [ ] **Phase 6 (Camera Control)**: Bezier-path camera tracks and shot sequencing.
+### Launchers
+- Windows: `START_MSTORM.bat`
+- Linux/macOS: `./START_MSTORM.sh`
 
-## 📜 Documentation
-- [Linux Mint Bring-Up Guide](docs/linux-mint-bring-up.md)
-- [Cross-Platform Development](docs/cross-platform-development.md)
-- [Architecture Overview](docs/02_core_architecture.md)
+## Project Structure
+- `src/`: active V2 app.
+- `src-tauri/`: native desktop scaffold.
+- `index.html`: legacy V1 standalone sandbox.
+- `docs/`: product/technical notes.
+- `OA-Codex-brain/`: operational understanding, execution plans, and team assessment docs.
+
+## Documentation
+- [Docs Index](docs/README.md)
+- [Technical Roadmap](docs/02_technical_roadmap.md)
+- [Technical Knowledge Base](docs/06_technical_knowledge_base.md)
 - [Handoff Guide](docs/handoff_guide.md)
+- [Setup Guide](docs/setup_guide.md)
+- [OA Codex Brain Index](OA-Codex-brain/00_INDEX.md)
 
-## 🤝 Contributing
-This is an open "Story Sandbox". Contributions to the core engine or additional GLTF assets are welcome.
-
-## ⚖️ License
-*License pending (MIT recommended for public release).*
-
----
-**Status**: Interaction Loop Verified 🟢 | **GitHub Ready**
+## Roadmap Focus
+- Phase A: repo coherence and documentation consolidation.
+- Phase B: V2 parity for save/load and shot system.
+- Phase C: quality baseline (dependency alignment, lint, CI, smoke tests).
+- Phase D: asset ingestion MVP via Tauri.
+- Phase E: optional AI cinematic render layer.

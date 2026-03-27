@@ -2,8 +2,8 @@
 
 ## 0. System Overview
 MStorm Studio 2026 is a low-latency, "Zero-Friction" 3D storytelling sandbox, inspired by the legacy of Moviestorm.
-- **V1 (Current Stable):** Standalone Vanilla JS + Three.js [index.html](file:///C:/REPOO/StarterX1/index.html).
-- **V2 (In-Development):** React + Zustand + R3F + Tauri [v2_src/](file:///C:/REPOO/StarterX1/v2_src/).
+- **V1 (Legacy Reference):** Standalone Vanilla JS + Three.js in `index.html`.
+- **V2 (Current Active Path):** React + Zustand + R3F + Tauri in `src/` and `src-tauri/`.
 
 ---
 
@@ -55,6 +55,6 @@ We are transitioning to a **Native Tauri Application** to solve:
 ---
 
 ## 5. Known Integration Points
-- **GLTF Loaders:** Prepped in `v2_src` for real character models.
-- **Zustand Stores:** Used in V2 for state separation.
+- **GLTF Loaders:** Active in `src/components/Entity.tsx`.
+- **Zustand Stores:** Active in `src/store/useStore.ts`.
 - **Mixamo Bridge:** Planned for high-fidelity animations.
