@@ -102,10 +102,18 @@ export const useStore = create<ProjectState>()(
 
       setAnimation: (entityId, animation) => set((state) => {
         const scene = state.scenes[state.activeSceneId]
+        const targetEntity = scene.entities.find((e) => e.id === entityId)
+        if (!targetEntity || targetEntity.animation === animation) {
+          return state
+        }
+
+        const snapshot = JSON.stringify(state.scenes)
         const newEntities = scene.entities.map(e => 
           e.id === entityId ? { ...e, animation } : e
         )
         return {
+          history: [snapshot, ...state.history.slice(0, 19)],
+          redoStack: [],
           scenes: {
             ...state.scenes,
             [state.activeSceneId]: { ...scene, entities: newEntities }
@@ -115,15 +123,36 @@ export const useStore = create<ProjectState>()(
 
       updateEntityTransform: (id, position, rotation, scale) => set((state) => {
         const scene = state.scenes[state.activeSceneId]
+        const targetEntity = scene.entities.find((e) => e.id === id)
+        if (!targetEntity) {
+          return state
+        }
+
+        const nextPosition = position || targetEntity.position
+        const nextRotation = rotation || targetEntity.rotation
+        const nextScale = scale || targetEntity.scale
+
+        const hasChanged =
+          targetEntity.position.some((value, index) => value !== nextPosition[index]) ||
+          targetEntity.rotation.some((value, index) => value !== nextRotation[index]) ||
+          targetEntity.scale.some((value, index) => value !== nextScale[index])
+
+        if (!hasChanged) {
+          return state
+        }
+
+        const snapshot = JSON.stringify(state.scenes)
         const newEntities = scene.entities.map(e => 
           e.id === id ? { 
             ...e, 
-            position: position || e.position,
-            rotation: rotation || e.rotation,
-            scale: scale || e.scale
+            position: nextPosition,
+            rotation: nextRotation,
+            scale: nextScale
           } : e
         )
         return {
+          history: [snapshot, ...state.history.slice(0, 19)],
+          redoStack: [],
           scenes: {
             ...state.scenes,
             [state.activeSceneId]: { ...scene, entities: newEntities }
@@ -174,17 +203,20 @@ export const useStore = create<ProjectState>()(
 
       setActiveScene: (id) => set({ activeSceneId: id, selectedEntityId: null }),
 
-      addScene: (name) => set((state) => ({
-        scenes: {
-          ...state.scenes,
-          [Date.now()]: {
-            id: Date.now().toString(),
-            name,
-            entities: [],
-            env: { floor: '#1a1c23', light: 1.5 }
+      addScene: (name) => set((state) => {
+        const id = Date.now().toString()
+        return {
+          scenes: {
+            ...state.scenes,
+            [id]: {
+              id,
+              name,
+              entities: [],
+              env: { floor: '#1a1c23', light: 1.5 }
+            }
           }
         }
-      })),
+      }),
 
       undo: () => {
         const { history, redoStack, scenes } = get()
@@ -205,7 +237,7 @@ export const useStore = create<ProjectState>()(
         if (redoStack.length === 0) return
 
         const next = redoStack[0]
-        const currentSnapshot = JSON.stringify(history)
+        const currentSnapshot = JSON.stringify(scenes)
 
         set({
           scenes: JSON.parse(next),

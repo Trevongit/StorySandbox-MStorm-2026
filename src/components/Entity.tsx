@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { Component, ReactNode, useEffect, useRef } from 'react'
 import { useGLTF, useAnimations, PivotControls } from '@react-three/drei'
 import { Group } from 'three'
 import { useStore, Entity } from '../store/useStore'
@@ -9,6 +9,73 @@ interface Props {
   entity: Entity
 }
 
+interface ActorAssetBoundaryProps {
+  children: ReactNode
+  fallback: ReactNode
+}
+
+interface ActorAssetBoundaryState {
+  hasError: boolean
+}
+
+class ActorAssetBoundary extends Component<ActorAssetBoundaryProps, ActorAssetBoundaryState> {
+  public state: ActorAssetBoundaryState = { hasError: false }
+
+  public static getDerivedStateFromError(): ActorAssetBoundaryState {
+    return { hasError: true }
+  }
+
+  public componentDidCatch(error: Error) {
+    console.warn(`Failed to load actor model at ${ACTOR_MODEL_URL}. Using fallback mesh instead.`, error)
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return this.props.fallback
+    }
+    return this.props.children
+  }
+}
+
+function ActorModel({ entity, group }: { entity: Entity; group: React.RefObject<Group> }) {
+  const { scene, animations } = useGLTF(ACTOR_MODEL_URL) as any
+  const { actions } = useAnimations(animations, group)
+
+  useEffect(() => {
+    if (!entity.animation) return
+
+    const clipName = entity.animation.charAt(0).toUpperCase() + entity.animation.slice(1)
+    const action = actions[clipName] || actions[entity.animation]
+    if (!action) return
+
+    action.reset().fadeIn(0.3).play()
+    return () => {
+      action.fadeOut(0.3)
+    }
+  }, [actions, entity.animation])
+
+  return <primitive object={scene.clone()} />
+}
+
+function ActorFallback({ color = '#ffcc00' }: { color?: string }) {
+  return (
+    <group>
+      <mesh castShadow receiveShadow position={[0, 0.8, 0]}>
+        <capsuleGeometry args={[0.25, 0.7, 8, 16]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0, 1.45, 0]}>
+        <sphereGeometry args={[0.22, 24, 24]} />
+        <meshStandardMaterial color="#f5d7b5" />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.35, 0.45, 0.12, 24]} />
+        <meshStandardMaterial color="#2f3340" />
+      </mesh>
+    </group>
+  )
+}
+
 export function EntityComponent({ entity }: Props) {
   const selectEntity = useStore((s) => s.selectEntity)
   const selectedEntityId = useStore((s) => s.selectedEntityId)
@@ -16,24 +83,6 @@ export function EntityComponent({ entity }: Props) {
   const isSelected = selectedEntityId === entity.id
 
   const group = useRef<Group>(null!)
-  
-  // 🛡️ Phase 3: Safe Local GLTF Loading
-  const { scene, animations } = useGLTF(ACTOR_MODEL_URL) as any
-  const { actions } = useAnimations(animations, group)
-
-  // 🎬 Animation Controller
-  useEffect(() => {
-    if (entity.type === 'actor' && entity.animation) {
-      // Handle different casing/naming conventions
-      const clipName = entity.animation.charAt(0).toUpperCase() + entity.animation.slice(1)
-      const action = actions[clipName] || actions[entity.animation]
-      
-      if (action) {
-        action.reset().fadeIn(0.3).play()
-        return () => { action.fadeOut(0.3) }
-      }
-    }
-  }, [entity.animation, actions, entity.type])
 
   const handlePointerDown = (e: any) => {
     e.stopPropagation()
@@ -78,7 +127,9 @@ export function EntityComponent({ entity }: Props) {
       onPointerDown={handlePointerDown}
     >
       {entity.type === 'actor' ? (
-        <primitive object={scene.clone()} />
+        <ActorAssetBoundary fallback={<ActorFallback color={entity.color} />}>
+          <ActorModel entity={entity} group={group} />
+        </ActorAssetBoundary>
       ) : (
         renderPrimitive()
       )}
